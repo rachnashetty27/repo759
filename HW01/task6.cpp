@@ -1,3 +1,4 @@
+#this task has been done with the help of claude.ai and google search
 #include <iostream>
 #include <cstdio>
 
