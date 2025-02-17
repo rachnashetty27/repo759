@@ -35,18 +35,18 @@ int main(int argc, char* argv[]) {
     std::cout << "Execution Time (ms): " << elapsed.count() << std::endl;
 
     // Print input array
-    std::cout << "Input Array: ";
-    for (size_t i = 0; i < n; ++i) {
-        std::cout << input[i] << " ";
-    }
-    std::cout << std::endl;
+    //std::cout << "Input Array: ";
+    //for (size_t i = 0; i < n; ++i) {
+    //    std::cout << input[i] << " ";
+    //}
+    //std::cout << std::endl;
 
     // Print scanned (output) array
-    std::cout << "Scanned Array: ";
-    for (size_t i = 0; i < n; ++i) {
-        std::cout << output[i] << " ";
-    }
-    std::cout << std::endl;
+    //std::cout << "Scanned Array: ";
+    //for (size_t i = 0; i < n; ++i) {
+    //    std::cout << output[i] << " ";
+    //}
+    //std::cout << std::endl;
 
     // Print first and last element of scanned array
     std::cout << "First Element: " << output[0] << std::endl;
