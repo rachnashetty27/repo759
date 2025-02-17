@@ -1,3 +1,4 @@
+//This task has been done with the help of chatgpt, claude.ai and google search
 #include "matmul.h"
 
 // Standard row-major order multiplication (i, j, k)
