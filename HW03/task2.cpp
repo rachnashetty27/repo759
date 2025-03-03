@@ -5,67 +5,41 @@
 
 using namespace std;
 
-// Function to fill an n x n image matrix with random float values
+// Function to fill an n×n matrix with random float values
 void fill_matrix(float* matrix, int n) {
     for (int i = 0; i < n * n; i++) {
-        matrix[i] = static_cast<float>(rand()) / RAND_MAX;  // Random values in range [0,1]
-    }
-}
-
-// Function to fill a 3x3 mask matrix with random float values
-void fill_mask(float* mask) {
-    for (int i = 0; i < 9; i++) {
-        mask[i] = static_cast<float>(rand()) / RAND_MAX;  // Random values in range [0,1]
+        matrix[i] = static_cast<float>(rand()) / RAND_MAX; // Values in range [0,1]
     }
 }
 
 int main(int argc, char* argv[]) {
-    // Ensure the correct number of command-line arguments is provided
     if (argc != 3) {
-        cerr << "Usage: ./task2 <matrix_size> <num_threads>\n";
+        cerr << "Usage: ./task2 <matrix_size> <num_threads>" << endl;
         return 1;
     }
 
-    // Parse command-line arguments
-    int n = atoi(argv[1]);      // Image size (n x n)
-    int threads = atoi(argv[2]); // Number of OpenMP threads
+    int n = atoi(argv[1]);       // Matrix size
+    int threads = atoi(argv[2]); // Number of threads
 
-    // Allocate memory for the image, mask, and output matrices
+    // Allocate memory for image, mask, and output matrix
     float* image = new float[n * n];
-    float* mask = new float[3 * 3]; // 3x3 convolution mask
+    float* mask = new float[3 * 3]; // 3x3 mask
     float* output = new float[n * n];
 
-    // Fill matrices with random values
+    // Fill image and mask with random values
     fill_matrix(image, n);
-    fill_mask(mask);
+    fill_matrix(mask, 3);
 
     // Measure execution time
     auto start = chrono::high_resolution_clock::now();
-
-    // Apply convolution using OpenMP parallelization
     convolve(image, mask, output, n, threads);
-
-    // Stop measuring execution time
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double, milli> elapsed = end - start;
 
-    // Check if output contains only zeros
-    bool all_zero = true;
-    for (int i = 0; i < n * n; i++) {
-        if (output[i] != 0) {
-            all_zero = false;
-            break;
-        }
-    }
-
-    if (all_zero) {
-        cerr << "Warning: Output matrix contains only zeros! Check convolution function." << endl;
-    }
-
-    // Print required outputs
-    cout << "First element of output: " << output[0] << endl;
-    cout << "Last element of output: " << output[n * n - 1] << endl;
-    cout << "Execution time (ms): " << elapsed.count() << endl;
+    // Print key results for verification
+    cout << output[0] << endl;            // First element of output
+    cout << output[n * n - 1] << endl;    // Last element of output
+    cout << elapsed.count() << endl;      // Execution time in milliseconds
 
     // Free allocated memory
     delete[] image;
