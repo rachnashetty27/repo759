@@ -1,17 +1,17 @@
 #include "matmul.h"
 #include <omp.h>
 
-// Function to perform parallel matrix multiplication using OpenMP
-void mmul(const float* matA, const float* matB, float* matC, const std::size_t size) {
-    #pragma omp parallel for collapse(2) schedule(dynamic)
-    for (std::size_t r = 0; r < size; r++) {
-        for (std::size_t c = 0; c < size; c++) {
+void mmul(const float* A, const float* B, float* C, std::size_t n) {
+    #pragma omp parallel for schedule(static)
+    for (std::size_t i = 0; i < n; i++) {
+        for (std::size_t j = 0; j < n; j++) {
             float sum = 0.0f;
-            for (std::size_t k = 0; k < size; k++) {
-                sum += matA[r * size + k] * matB[k * size + c];
+            for (std::size_t k = 0; k < n; k++) {
+                sum += A[i * n + k] * B[k * n + j];
             }
-            matC[r * size + c] = sum; // Removed atomic
+            C[i * n + j] = sum;  // Direct assignment, no atomic
         }
     }
 }
+
 
