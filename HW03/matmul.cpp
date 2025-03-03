@@ -1,17 +1,19 @@
-#include "matmul.h"
+#include <iostream>
 #include <omp.h>
+#include "matmul.h"
 
-void mmul(const float* A, const float* B, float* C, std::size_t n) {
-    #pragma omp parallel for schedule(static)
-    for (std::size_t i = 0; i < n; i++) {
-        for (std::size_t j = 0; j < n; j++) {
-            float sum = 0.0f;
-            for (std::size_t k = 0; k < n; k++) {
+void mmul(float* A, float* B, float* C, int n, int threads) {
+    #pragma omp parallel for num_threads(threads)
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            float sum = 0;
+            for (int k = 0; k < n; k++) {
                 sum += A[i * n + k] * B[k * n + j];
             }
-            C[i * n + j] = sum;  // Direct assignment, no atomic
+            C[i * n + j] = sum;
         }
     }
 }
+
 
 
