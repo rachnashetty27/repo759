@@ -4,13 +4,13 @@
 
 using namespace std;
 
-// Parallel matrix multiplication using OpenMP
+// Optimized parallel matrix multiplication using OpenMP with blocking
 void mmul(float* A, float* B, float* C, int n, int threads) {
     // Ensure OpenMP is enabled
     #ifdef _OPENMP
-        cout << "OpenMP enabled with " << threads << " threads.\n";
+        cout << "OpenMP enabled with " << threads << " threads." << endl;
     #else
-        cerr << "OpenMP NOT enabled! Ensure compilation with -fopenmp.\n";
+        cerr << "OpenMP NOT enabled! Ensure compilation with -fopenmp." << endl;
         return;
     #endif
 
@@ -22,12 +22,17 @@ void mmul(float* A, float* B, float* C, int n, int threads) {
         }
     }
 
-    // Perform matrix multiplication in parallel
+    // Optimized matrix multiplication using blocking
+    int blockSize = 64; // Block size for cache efficiency
     #pragma omp parallel for num_threads(threads) collapse(2)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            for (int k = 0; k < n; k++) {
-                C[i * n + j] += A[i * n + k] * B[k * n + j];
+    for (int i = 0; i < n; i += blockSize) {
+        for (int j = 0; j < n; j += blockSize) {
+            for (int ii = i; ii < min(i + blockSize, n); ii++) {
+                for (int jj = j; jj < min(j + blockSize, n); jj++) {
+                    for (int k = 0; k < n; k++) {
+                        C[ii * n + jj] += A[ii * n + k] * B[k * n + jj];
+                    }
+                }
             }
         }
     }
