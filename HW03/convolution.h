@@ -5,4 +5,3 @@
 void convolve(float* image, float* mask, float* output, int n, int threads);
 
 #endif
-

@@ -1,59 +1,57 @@
 #include <iostream>
-#include <vector>
 #include <cstdlib>
-#include <ctime>
 #include <chrono>
-#include <omp.h>
 #include "convolution.h"
 
+using namespace std;
+
+// Function to fill an n×n matrix with random float values
+void fill_matrix(float* matrix, int n) {
+    for (int i = 0; i < n * n; i++) {
+        matrix[i] = static_cast<float>(rand()) / RAND_MAX; // Values in range [0,1]
+    }
+}
+
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <n> <m> <t>" << std::endl;
+    if (argc != 3) {
+        cerr << "Usage: ./task2 <matrix_size> <num_threads>" << endl;
         return 1;
     }
 
-    // Read n, m, t from command line
-    int n = std::stoi(argv[1]);
-    int m = std::stoi(argv[2]);
-    int t = std::stoi(argv[3]); // Number of threads
+    int n = atoi(argv[1]);       // Matrix size
+    int threads = atoi(argv[2]); // Number of threads
 
-    if (m % 2 == 0) {
-        std::cerr << "Error: m must be an odd number." << std::endl;
-        return 1;
+    // Allocate memory for image, mask, and output matrix
+    float* image = new float[n * n];
+    float* mask = new float[3 * 3]; // 3x3 mask
+    float* output = new float[n * n];
+
+    // Fill image and mask with random values
+    fill_matrix(image, n);
+    fill_matrix(mask, 3);
+
+    // Debugging: Print first 5 values of mask to ensure it's initialized
+    cout << "Mask values: ";
+    for (int i = 0; i < 9; i++) {
+        cout << mask[i] << " ";
     }
-
-    // Set number of OpenMP threads
-    omp_set_num_threads(t);
-
-    // Seed random number generator
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
-
-    // Generate n x n image with values in range [-10.0, 10.0]
-    std::vector<float> image(n * n);
-    for (int i = 0; i < n * n; ++i) {
-        image[i] = static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f;
-    }
-
-    // Generate m x m mask with values in range [-1.0, 1.0]
-    std::vector<float> mask(m * m);
-    for (int i = 0; i < m * m; ++i) {
-        mask[i] = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
-    }
-
-    // Output array
-    std::vector<float> output(n * n);
+    cout << endl;
 
     // Measure execution time
-    auto start = std::chrono::high_resolution_clock::now();
-    convolve(image, output, mask, n, m);
-    auto end = std::chrono::high_resolution_clock::now();
+    auto start = chrono::high_resolution_clock::now();
+    convolve(image, mask, output, n, threads);
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> elapsed = end - start;
 
-    std::chrono::duration<double, std::milli> elapsed = end - start;
+    // Print key results for verification
+    cout << "First element of output: " << output[0] << endl;
+    cout << "Last element of output: " << output[n * n - 1] << endl;
+    cout << "Execution time (ms): " << elapsed.count() << endl;
 
-    // Print results
-    std::cout << output[0] << std::endl; // First element
-    std::cout << output[n * n - 1] << std::endl; // Last element
-    std::cout << elapsed.count() << std::endl; // Time in milliseconds
+    // Free allocated memory
+    delete[] image;
+    delete[] mask;
+    delete[] output;
 
     return 0;
 }
