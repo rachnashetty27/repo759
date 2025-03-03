@@ -1,63 +1,68 @@
-#include <iostream>
-#include <cstdlib>
-#include <chrono>
 #include "matmul.h"
+#include <iostream>
+#include <vector>
+#include <random>
+#include <chrono>
+#include <cstdlib> // for std::atoi, std::atoll
+#include <omp.h>
 
-using namespace std;
-
-// Function to fill an n x n matrix with random float values
-void fill_matrix(float* matrix, int n) {
-    for (int i = 0; i < n * n; i++) {
-        matrix[i] = static_cast<float>(rand()) / RAND_MAX;  // Values in range [0,1]
-    }
-
-    // Debugging: Print first 5 values for verification
-    cout << "First 5 values of matrix: ";
-    for (int i = 0; i < 5; i++) {
-        cout << matrix[i] << " ";
-    }
-    cout << endl;
-}
-
-int main(int argc, char* argv[]) {
-    // Ensure correct number of command-line arguments
-    if (argc != 3) {
-        cerr << "Usage: ./task1 <matrix_size> <num_threads>" << endl;
+// Main function to perform parallel matrix multiplication
+int main(int argc, char** argv) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <matrix_size> <num_threads>" << std::endl;
         return 1;
     }
 
-    // Parse command-line arguments
-    int n = atoi(argv[1]);       // Matrix size
-    int threads = atoi(argv[2]); // Number of threads
+    // Read matrix size and thread count from command-line arguments
+    std::size_t dim = static_cast<std::size_t>(std::atoll(argv[1]));
+    int threadCount = std::atoi(argv[2]);
 
-    // Allocate memory for matrices A, B, and C
-    float* A = new float[n * n];
-    float* B = new float[n * n];
-    float* C = new float[n * n];
+    // Allocate memory dynamically for matrices
+    float* matrixA = static_cast<float*>(malloc(dim * dim * sizeof(float)));
+    float* matrixB = static_cast<float*>(malloc(dim * dim * sizeof(float)));
+    float* matrixC = static_cast<float*>(calloc(dim * dim, sizeof(float))); // Zero-initialize C
 
-    // Fill matrices A and B with random values
-    fill_matrix(A, n);
-    fill_matrix(B, n);
+    // Ensure memory allocation was successful
+    if (!matrixA || !matrixB || !matrixC) {
+        std::cerr << "Memory allocation failed!" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    // Start time measurement
-    auto start = chrono::high_resolution_clock::now();
+    // Random number generator for matrix elements
+    std::random_device seed;
+    std::mt19937 generator(seed());
+    std::uniform_real_distribution<float> range(-1.0f, 1.0f);
 
-    // Perform parallel matrix multiplication
-    mmul(A, B, C, n, threads);
+    // Populate input matrices with random float values
+    for (std::size_t row = 0; row < dim; row++) {
+        for (std::size_t col = 0; col < dim; col++) {
+            matrixA[row * dim + col] = range(generator);
+            matrixB[row * dim + col] = range(generator);
+        }
+    }
 
-    // End time measurement
-    auto end = chrono::high_resolution_clock::now();
-    chrono::duration<double, milli> elapsed = end - start;
+    // Measure execution time
+    auto start = std::chrono::high_resolution_clock::now();
 
-    // Print key results for correctness verification
-    cout << "First element of C: " << C[0] << endl;
-    cout << "Last element of C: " << C[n * n - 1] << endl;
-    cout << "Execution time (ms): " << elapsed.count() << endl;
+    // Set OpenMP thread count and perform matrix multiplication
+    omp_set_num_threads(threadCount);
+    #pragma omp parallel
+    {
+        mmul(matrixA, matrixB, matrixC, dim);
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float, std::milli> timeTaken = end - start;
+
+    // Print results
+    std::cout << matrixC[0] << std::endl; // First element
+    std::cout << matrixC[(dim - 1) * dim + (dim - 1)] << std::endl; // Last element
+    std::cout << timeTaken.count() << std::endl; // Execution time in ms
 
     // Free allocated memory
-    delete[] A;
-    delete[] B;
-    delete[] C;
+    free(matrixA);
+    free(matrixB);
+    free(matrixC);
 
     return 0;
 }

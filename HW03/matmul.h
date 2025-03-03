@@ -1,7 +1,10 @@
-#ifndef MATMUL_H
-#define MATMUL_H
+#ifndef MATRIX_MULTIPLICATION_H
+#define MATRIX_MULTIPLICATION_H
+
+#include <cstddef>
+#include <omp.h>
 
 // Function prototype for parallel matrix multiplication
-void mmul(float* A, float* B, float* C, int n, int threads);
+void mmul(const float* A, const float* B, float* C, std::size_t n);
 
-#endif
+#endif // MATRIX_MULTIPLICATION_H
