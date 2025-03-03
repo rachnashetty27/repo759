@@ -1,50 +1,55 @@
 #include <iostream>
+#include <vector>
 #include <cstdlib>
+#include <ctime>
 #include <chrono>
 #include "convolution.h"
 
-using namespace std;
-
-// Function to fill an n×n matrix with random float values
-void fill_matrix(float* matrix, int n) {
-    for (int i = 0; i < n * n; i++) {
-        matrix[i] = static_cast<float>(rand()) / RAND_MAX; // Values in range [0,1]
-    }
-}
-
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        cerr << "Usage: ./task2 <matrix_size> <num_threads>" << endl;
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <n> <m> <threads>" << std::endl;
         return 1;
     }
 
-    int n = atoi(argv[1]);       // Matrix size
-    int threads = atoi(argv[2]); // Number of threads
+    // Read n, m, and number of threads from command line
+    int n = std::stoi(argv[1]);
+    int m = std::stoi(argv[2]);
+    int num_threads = std::stoi(argv[3]);
 
-    // Allocate memory for image, mask, and output matrix
-    float* image = new float[n * n];
-    float* mask = new float[3 * 3]; // 3x3 mask
-    float* output = new float[n * n];
+    if (m % 2 == 0) {
+        std::cerr << "Error: m must be an odd number." << std::endl;
+        return 1;
+    }
 
-    // Fill image and mask with random values
-    fill_matrix(image, n);
-    fill_matrix(mask, 3);
+    // Seed random number generator
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+
+    // Generate n x n image with values in range [-10.0, 10.0]
+    std::vector<float> image(n * n);
+    for (int i = 0; i < n * n; ++i) {
+        image[i] = static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f;
+    }
+
+    // Generate m x m mask with values in range [-1.0, 1.0]
+    std::vector<float> mask(m * m);
+    for (int i = 0; i < m * m; ++i) {
+        mask[i] = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+    }
+
+    // Output array
+    std::vector<float> output(n * n);
 
     // Measure execution time
-    auto start = chrono::high_resolution_clock::now();
-    convolve(image, mask, output, n, threads);
-    auto end = chrono::high_resolution_clock::now();
-    chrono::duration<double, milli> elapsed = end - start;
+    auto start = std::chrono::high_resolution_clock::now();
+    convolve(image, output, mask, n, m, num_threads);
+    auto end = std::chrono::high_resolution_clock::now();
 
-    // Print key results for verification
-    cout << output[0] << endl;            // First element of output
-    cout << output[n * n - 1] << endl;    // Last element of output
-    cout << elapsed.count() << endl;      // Execution time in milliseconds
+    std::chrono::duration<double, std::milli> elapsed = end - start;
 
-    // Free allocated memory
-    delete[] image;
-    delete[] mask;
-    delete[] output;
+    // Print results
+    std::cout << elapsed.count() << std::endl;
+    std::cout << output[0] << std::endl; // First element
+    std::cout << output[n * n - 1] << std::endl; // Last element
 
     return 0;
 }
