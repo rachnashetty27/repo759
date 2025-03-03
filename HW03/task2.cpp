@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cstdlib>
-#include <chrono>  // Used for measuring execution time
+#include <chrono>
 #include "convolution.h"
 
 using namespace std;
@@ -14,7 +14,7 @@ void fill_matrix(float* matrix, int n) {
 
 // Function to fill a 3x3 mask matrix with random float values
 void fill_mask(float* mask) {
-    for (int i = 0; i < 9; i++) {  // 3x3 mask has 9 elements
+    for (int i = 0; i < 9; i++) {
         mask[i] = static_cast<float>(rand()) / RAND_MAX;  // Random values in range [0,1]
     }
 }
@@ -39,16 +39,7 @@ int main(int argc, char* argv[]) {
     fill_matrix(image, n);
     fill_mask(mask);
 
-    // Debug: Print first few values of the image and mask
-    cout << "🔹 First 5 image values: ";
-    for (int i = 0; i < 5; i++) cout << image[i] << " ";
-    cout << endl;
-
-    cout << "🔹 Mask values: ";
-    for (int i = 0; i < 9; i++) cout << mask[i] << " ";
-    cout << endl;
-
-    // Measure execution time using high-resolution clock
+    // Measure execution time
     auto start = chrono::high_resolution_clock::now();
 
     // Apply convolution using OpenMP parallelization
@@ -58,7 +49,7 @@ int main(int argc, char* argv[]) {
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double, milli> elapsed = end - start;
 
-    // Check if output contains only zeros (which would indicate an issue)
+    // Check if output contains only zeros
     bool all_zero = true;
     for (int i = 0; i < n * n; i++) {
         if (output[i] != 0) {
@@ -68,15 +59,15 @@ int main(int argc, char* argv[]) {
     }
 
     if (all_zero) {
-        cerr << "⚠️ Warning: Output matrix contains only zeros! Check convolution function." << endl;
+        cerr << "Warning: Output matrix contains only zeros! Check convolution function." << endl;
     }
 
     // Print required outputs
-    cout << "🟢 First element of output: " << output[0] << endl;
-    cout << "🟢 Last element of output: " << output[n * n - 1] << endl;
-    cout << "⏳ Execution time (ms): " << elapsed.count() << endl;
+    cout << "First element of output: " << output[0] << endl;
+    cout << "Last element of output: " << output[n * n - 1] << endl;
+    cout << "Execution time (ms): " << elapsed.count() << endl;
 
-    // Free allocated memory to avoid memory leaks
+    // Free allocated memory
     delete[] image;
     delete[] mask;
     delete[] output;
