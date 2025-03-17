@@ -1,13 +1,20 @@
-#include <omp.h>
 #include <iostream>
-#include <cstdlib>
 #include <cmath>
 #include <chrono>
+#include <omp.h>
+#include <vector>
 
-using std::chrono::high_resolution_clock;
-using std::chrono::duration;
+using namespace std;
+using namespace std::chrono;
 
-void getAcc(const double pos[][3], const double mass[], double acc[][3], int N, int num_threads) {
+// Constants
+const double G = 1.0;          // Gravitational constant
+const double softening = 0.1;  // Softening length
+const double dt = 0.01;        // Time step
+const double board_size = 4.0; // Simulation boundary
+
+// Function to calculate acceleration using OpenMP with Dynamic Scheduling
+void getAcc(const vector<vector<double>>& pos, const vector<double>& mass, vector<vector<double>>& acc, int N, int num_threads) {
     #pragma omp parallel for num_threads(num_threads) schedule(dynamic)
     for (int i = 0; i < N; i++) {
         acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
@@ -17,35 +24,91 @@ void getAcc(const double pos[][3], const double mass[], double acc[][3], int N, 
                 double dy = pos[j][1] - pos[i][1];
                 double dz = pos[j][2] - pos[i][2];
 
-                double distSqr = dx * dx + dy * dy + dz * dz + 0.1;
+                double distSqr = dx * dx + dy * dy + dz * dz + softening * softening;
                 double invDist = 1.0 / sqrt(distSqr);
                 double invDistCube = invDist * invDist * invDist;
 
-                acc[i][0] += mass[j] * dx * invDistCube;
-                acc[i][1] += mass[j] * dy * invDistCube;
-                acc[i][2] += mass[j] * dz * invDistCube;
+                acc[i][0] += G * mass[j] * dx * invDistCube;
+                acc[i][1] += G * mass[j] * dy * invDistCube;
+                acc[i][2] += G * mass[j] * dz * invDistCube;
             }
         }
     }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <num_particles> <simulation_time> <num_threads>\n";
+        cerr << "Usage: " << argv[0] << " <num_particles> <simulation_time> <num_threads>\n";
         return 1;
     }
 
-    int N = std::stoi(argv[1]);
-    double tEnd = std::stod(argv[2]);
-    int num_threads = std::stoi(argv[3]);
+    int N = stoi(argv[1]);         // Number of particles
+    double tEnd = stod(argv[2]);   // Simulation end time
+    int num_threads = stoi(argv[3]);  // Number of OpenMP threads
 
-    high_resolution_clock::time_point start = high_resolution_clock::now();
+    // Start timing
+    auto start = high_resolution_clock::now();
 
-    // Simulation logic (same as task3 but with dynamic scheduling)
-    
-    high_resolution_clock::time_point end = high_resolution_clock::now();
-    duration<double, std::milli> duration_sec = std::chrono::duration_cast<duration<double, std::milli>>(end - start);
-    std::cout << "Dynamic Scheduling Time: " << duration_sec.count() << "ms\n";
+    // Initialize positions, velocities, accelerations, and masses
+    vector<vector<double>> pos(N, vector<double>(3));
+    vector<vector<double>> vel(N, vector<double>(3, 0.0));
+    vector<vector<double>> acc(N, vector<double>(3, 0.0));
+    vector<double> mass(N, 1.0);
+
+    // Random initial positions
+    srand(42);
+    for (int i = 0; i < N; i++) {
+        pos[i][0] = (double(rand()) / RAND_MAX) * board_size - (board_size / 2);
+        pos[i][1] = (double(rand()) / RAND_MAX) * board_size - (board_size / 2);
+        pos[i][2] = (double(rand()) / RAND_MAX) * board_size - (board_size / 2);
+    }
+
+    // Compute initial accelerations
+    getAcc(pos, mass, acc, N, num_threads);
+
+    // Simulation loop
+    int Nt = int(tEnd / dt);
+    for (int step = 0; step < Nt; step++) {
+        // (1/2) Kick - Update velocity using current acceleration
+        #pragma omp parallel for num_threads(num_threads)
+        for (int i = 0; i < N; i++) {
+            vel[i][0] += 0.5 * dt * acc[i][0];
+            vel[i][1] += 0.5 * dt * acc[i][1];
+            vel[i][2] += 0.5 * dt * acc[i][2];
+        }
+
+        // Drift - Update positions using velocity
+        #pragma omp parallel for num_threads(num_threads)
+        for (int i = 0; i < N; i++) {
+            pos[i][0] += dt * vel[i][0];
+            pos[i][1] += dt * vel[i][1];
+            pos[i][2] += dt * vel[i][2];
+        }
+
+        // Debugging: Print the position of the first particle every 10 steps
+        if (step % 10 == 0) {
+            cout << "Step " << step << " first particle pos: (" 
+                 << pos[0][0] << ", " << pos[0][1] << ", " << pos[0][2] << ")\n";
+        }
+
+        // Update accelerations
+        getAcc(pos, mass, acc, N, num_threads);
+
+        // (1/2) Kick - Update velocity again with new acceleration
+        #pragma omp parallel for num_threads(num_threads)
+        for (int i = 0; i < N; i++) {
+            vel[i][0] += 0.5 * dt * acc[i][0];
+            vel[i][1] += 0.5 * dt * acc[i][1];
+            vel[i][2] += 0.5 * dt * acc[i][2];
+        }
+    }
+
+    // Stop timing
+    auto end = high_resolution_clock::now();
+    duration<double, std::milli> duration_sec = end - start;
+
+    // Print execution time
+    cout << "Dynamic Scheduling Time: " << duration_sec.count() << " ms\n";
 
     return 0;
 }
