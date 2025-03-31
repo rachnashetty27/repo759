@@ -8,14 +8,13 @@
 __global__ void vscale(float *a, float *b, int n);
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf("Usage: ./task3 <n> <threadsPerBlock>\n");
+    if (argc != 2) {
+        printf("Usage: ./task3 <n>\n");
         return 1;
     }
 
     int n = atoi(argv[1]);
-    int threadsPerBlock = atoi(argv[2]);
-    size_t bytes = n * sizeof(float);cd
+    size_t bytes = n * sizeof(float);
 
     // Allocate and fill host arrays
     float *hA = (float *)malloc(bytes);
@@ -41,7 +40,7 @@ int main(int argc, char *argv[]) {
     cudaEventCreate(&stop);
 
     // Launch kernel with 512 threads per block
-    int threadsPerBlock = 512;
+    int threadsPerBlock = 16;
     int blocks = (n + threadsPerBlock - 1) / threadsPerBlock;
 
     cudaEventRecord(start);
