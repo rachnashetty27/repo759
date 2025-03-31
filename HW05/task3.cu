@@ -8,13 +8,14 @@
 __global__ void vscale(float *a, float *b, int n);
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: ./task3 <n>\n");
+    if (argc != 3) {
+        printf("Usage: ./task3 <n> <threadsPerBlock>\n");
         return 1;
     }
 
     int n = atoi(argv[1]);
-    size_t bytes = n * sizeof(float);
+    int threadsPerBlock = atoi(argv[2]);
+    size_t bytes = n * sizeof(float);cd
 
     // Allocate and fill host arrays
     float *hA = (float *)malloc(bytes);
