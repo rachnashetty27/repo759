@@ -1,19 +1,20 @@
 // matmul.cu
 #include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <cstdio>
 #include "matmul.cuh"
 
-// Helper macro to access 1D array as 2D matrix
 #define IDX2C(i,j,n) (((i)*(n))+(j))
 
-// matmul_1: Basic tiled matrix multiplication using shared memory
+// Tiled matrix multiplication kernel for any data type T
 template<typename T>
-__global__ void matmul_kernel(T* A, T* B, T* C, int n, int TILE_SIZE) {
+__global__ void matmul_kernel(const T* A, const T* B, T* C, unsigned int n, unsigned int TILE_SIZE) {
     extern __shared__ T tile[];
     T* tileA = tile;
     T* tileB = tile + TILE_SIZE * TILE_SIZE;
 
-    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
-    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    unsigned int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    unsigned int col = blockIdx.x * TILE_SIZE + threadIdx.x;
     T val = 0;
 
     for (int t = 0; t < (n + TILE_SIZE - 1) / TILE_SIZE; ++t) {
@@ -39,26 +40,29 @@ __global__ void matmul_kernel(T* A, T* B, T* C, int n, int TILE_SIZE) {
         C[IDX2C(row, col, n)] = val;
 }
 
-// Dummy wrappers to allow compilation and test of all three methods
-template<typename T>
-void matmul_1(T* d_A, T* d_B, T* d_C, int n, int block_dim) {
+// int version
+__host__ void matmul_1(const int *A, const int *B, int *C, unsigned int n, unsigned int block_dim) {
     dim3 block(block_dim, block_dim);
     dim3 grid((n + block_dim - 1) / block_dim, (n + block_dim - 1) / block_dim);
-    size_t shared_mem_size = 2 * block_dim * block_dim * sizeof(T);
-    matmul_kernel<<<grid, block, shared_mem_size>>>(d_A, d_B, d_C, n, block_dim);
+    size_t shared_mem_size = 2 * block_dim * block_dim * sizeof(int);
+    matmul_kernel<<<grid, block, shared_mem_size>>>(A, B, C, n, block_dim);
+    cudaDeviceSynchronize();
 }
 
-template<typename T>
-void matmul_2(T* d_A, T* d_B, T* d_C, int n, int block_dim) {
-    matmul_1(d_A, d_B, d_C, n, block_dim);
+// float version
+__host__ void matmul_2(const float *A, const float *B, float *C, unsigned int n, unsigned int block_dim) {
+    dim3 block(block_dim, block_dim);
+    dim3 grid((n + block_dim - 1) / block_dim, (n + block_dim - 1) / block_dim);
+    size_t shared_mem_size = 2 * block_dim * block_dim * sizeof(float);
+    matmul_kernel<<<grid, block, shared_mem_size>>>(A, B, C, n, block_dim);
+    cudaDeviceSynchronize();
 }
 
-template<typename T>
-void matmul_3(T* d_A, T* d_B, T* d_C, int n, int block_dim) {
-    matmul_1(d_A, d_B, d_C, n, block_dim);
+// double version
+__host__ void matmul_3(const double *A, const double *B, double *C, unsigned int n, unsigned int block_dim) {
+    dim3 block(block_dim, block_dim);
+    dim3 grid((n + block_dim - 1) / block_dim, (n + block_dim - 1) / block_dim);
+    size_t shared_mem_size = 2 * block_dim * block_dim * sizeof(double);
+    matmul_kernel<<<grid, block, shared_mem_size>>>(A, B, C, n, block_dim);
+    cudaDeviceSynchronize();
 }
-
-// Explicit instantiation
-template void matmul_1<float>(float*, float*, float*, int, int);
-template void matmul_2<float>(float*, float*, float*, int, int);
-template void matmul_3<float>(float*, float*, float*, int, int);
