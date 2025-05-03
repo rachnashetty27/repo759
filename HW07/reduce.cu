@@ -1,20 +1,17 @@
-// reduce.cu
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
 #include "reduce.cuh"
-#include <cstdio>
+#include <cuda_runtime.h>
+#include <stdio.h>
 
+// Kernel using Reduction #4 ("First Add During Load")
 __global__ void reduce_kernel(float *g_idata, float *g_odata, unsigned int n) {
     extern __shared__ float sdata[];
-
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x * blockDim.x * 2 + threadIdx.x;
 
-    float sum = 0;
-    if (i < n) sum += g_idata[i];
-    if (i + blockDim.x < n) sum += g_idata[i + blockDim.x];
-
-    sdata[tid] = sum;
+    float mySum = 0;
+    if (i < n) mySum += g_idata[i];
+    if (i + blockDim.x < n) mySum += g_idata[i + blockDim.x];
+    sdata[tid] = mySum;
     __syncthreads();
 
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
@@ -28,19 +25,23 @@ __global__ void reduce_kernel(float *g_idata, float *g_odata, unsigned int n) {
 }
 
 __host__ void reduce(float **input, float **output, unsigned int N, unsigned int threads_per_block) {
-    float *in = *input;
-    float *out = *output;
-
     unsigned int blocks = (N + threads_per_block * 2 - 1) / (threads_per_block * 2);
+    float *tmp_in = *input;
+    float *tmp_out = *output;
 
     while (blocks > 1) {
-        reduce_kernel<<<blocks, threads_per_block, threads_per_block * sizeof(float)>>>(in, out, N);
+        reduce_kernel<<<blocks, threads_per_block, threads_per_block * sizeof(float)>>>(tmp_in, tmp_out, N);
         cudaDeviceSynchronize();
+
         N = blocks;
-        in = out;
         blocks = (N + threads_per_block * 2 - 1) / (threads_per_block * 2);
+        float *new_out;
+        cudaMalloc(&new_out, sizeof(float) * blocks);
+        tmp_in = tmp_out;
+        tmp_out = new_out;
     }
 
-    reduce_kernel<<<blocks, threads_per_block, threads_per_block * sizeof(float)>>>(in, out, N);
+    reduce_kernel<<<blocks, threads_per_block, threads_per_block * sizeof(float)>>>(tmp_in, tmp_out, N);
     cudaDeviceSynchronize();
+    cudaMemcpy(*input, tmp_out, sizeof(float), cudaMemcpyDeviceToDevice);
 }

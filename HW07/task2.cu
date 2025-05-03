@@ -1,60 +1,46 @@
-// task2.cu
-#include <iostream>
+#include "reduce.cuh"
 #include <cuda_runtime.h>
+#include <iostream>
 #include <cstdlib>
 #include <ctime>
-#include "reduce.cuh"
+#include <chrono>
 
 int main(int argc, char **argv) {
     if (argc != 3) {
-        std::cerr << "Usage: ./task2 <N> <threads_per_block>\n";
+        std::cerr << "Usage: ./task2 N threads_per_block\n";
         return 1;
     }
 
     unsigned int N = atoi(argv[1]);
     unsigned int threads_per_block = atoi(argv[2]);
 
-    // Host array initialization
-    float *h_input = new float[N];
-    for (unsigned int i = 0; i < N; ++i)
-        h_input[i] = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+    float *h_array = new float[N];
+    srand(time(0));
+    for (unsigned int i = 0; i < N; ++i) {
+        h_array[i] = 2.0f * rand() / RAND_MAX - 1.0f;  // Random float in [-1, 1]
+    }
 
-    // Device memory allocation
     float *d_input, *d_output;
+    cudaMalloc(&d_input, sizeof(float) * N);
+    cudaMemcpy(d_input, h_array, sizeof(float) * N, cudaMemcpyHostToDevice);
+
     unsigned int blocks = (N + threads_per_block * 2 - 1) / (threads_per_block * 2);
+    cudaMalloc(&d_output, sizeof(float) * blocks);
 
-    cudaMalloc(&d_input, N * sizeof(float));
-    cudaMalloc(&d_output, blocks * sizeof(float));
-    cudaMemcpy(d_input, h_input, N * sizeof(float), cudaMemcpyHostToDevice);
-
-    // Pointer-to-pointer variables
-    float *input_ptr = d_input;
-    float *output_ptr = d_output;
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
-    // Correct call for float** signature
-    reduce(&input_ptr, &output_ptr, N, threads_per_block);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float ms = 0;
-    cudaEventElapsedTime(&ms, stop, start);
+    auto start = std::chrono::high_resolution_clock::now();
+    reduce(&d_input, &d_output, N, threads_per_block);
+    auto end = std::chrono::high_resolution_clock::now();
 
     float result;
-    cudaMemcpy(&result, d_output, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&result, d_input, sizeof(float), cudaMemcpyDeviceToHost);
+    std::chrono::duration<double, std::milli> duration = end - start;
 
-    std::cout << "Final reduced sum: " << result << std::endl;
-    std::cout << "Time taken: " << ms << " ms" << std::endl;
+    std::cout << result << std::endl;
+    std::cout << duration.count() << std::endl;
 
     cudaFree(d_input);
     cudaFree(d_output);
-    delete[] h_input;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    delete[] h_array;
 
     return 0;
 }
