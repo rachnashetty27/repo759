@@ -9,9 +9,9 @@
 // Tiled matrix multiplication kernel for any data type T
 template<typename T>
 __global__ void matmul_kernel(const T* A, const T* B, T* C, unsigned int n, unsigned int TILE_SIZE) {
-    extern __shared__ T smem[];  // Combined shared memory for tileA and tileB
-    T* tileA = smem;
-    T* tileB = smem + TILE_SIZE * TILE_SIZE;
+    extern __shared__ char shared[];
+    T* tileA = reinterpret_cast<T*>(shared);
+    T* tileB = reinterpret_cast<T*>(shared + TILE_SIZE * TILE_SIZE * sizeof(T));
 
     unsigned int row = blockIdx.y * TILE_SIZE + threadIdx.y;
     unsigned int col = blockIdx.x * TILE_SIZE + threadIdx.x;
