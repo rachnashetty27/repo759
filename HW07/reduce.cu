@@ -27,10 +27,10 @@ __global__ void reduce_kernel(float *g_idata, float *g_odata, unsigned int n) {
     if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
-__host__ void reduce(float *input, float *output, unsigned int N, unsigned int threads_per_block) {
+__host__ void reduce(float **input, float **output, unsigned int N, unsigned int threads_per_block) {
     unsigned int blocks = (N + threads_per_block * 2 - 1) / (threads_per_block * 2);
-    float *in = input;
-    float *out = output;
+    float *in = *input;
+    float *out = *output;
 
     while (blocks > 1) {
         reduce_kernel<<<blocks, threads_per_block, threads_per_block * sizeof(float)>>>(in, out, N);

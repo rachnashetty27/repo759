@@ -25,12 +25,15 @@ int main(int argc, char **argv) {
     cudaMalloc(&d_output, blocks * sizeof(float));
     cudaMemcpy(d_input, h_input, N * sizeof(float), cudaMemcpyHostToDevice);
 
+    float *input_ptr = d_input;
+    float *output_ptr = d_output;
+
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
-    reduce(d_input, d_output, N, threads_per_block);
+    reduce(&input_ptr, &output_ptr, N, threads_per_block);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
