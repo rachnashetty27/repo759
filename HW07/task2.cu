@@ -14,10 +14,12 @@ int main(int argc, char **argv) {
     unsigned int N = atoi(argv[1]);
     unsigned int threads_per_block = atoi(argv[2]);
 
+    // Host array initialization
     float *h_input = new float[N];
     for (unsigned int i = 0; i < N; ++i)
         h_input[i] = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
 
+    // Device memory allocation
     float *d_input, *d_output;
     unsigned int blocks = (N + threads_per_block * 2 - 1) / (threads_per_block * 2);
 
@@ -25,6 +27,7 @@ int main(int argc, char **argv) {
     cudaMalloc(&d_output, blocks * sizeof(float));
     cudaMemcpy(d_input, h_input, N * sizeof(float), cudaMemcpyHostToDevice);
 
+    // Pointer-to-pointer variables
     float *input_ptr = d_input;
     float *output_ptr = d_output;
 
@@ -33,6 +36,7 @@ int main(int argc, char **argv) {
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
+    // Correct call for float** signature
     reduce(&input_ptr, &output_ptr, N, threads_per_block);
 
     cudaEventRecord(stop);
